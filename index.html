@@ -42,17 +42,16 @@
             font-size: 24px;
             cursor: pointer;
             border-radius: 5px;
-            transition: background-color 0.1s;
             position: relative;
         }
         .cell:hover {
             background-color: #C99C7D;
         }
-        .cell.wall {
-            background-color: #228B22;
+        .wall {
+            background-color: #228B22 !important;
         }
-        .cell.fog {
-            background-color: #333;
+        .fog {
+            background-color: #333 !important;
             color: transparent;
         }
         .stats {
@@ -64,74 +63,10 @@
             padding: 10px;
             border-radius: 5px;
         }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.7);
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: #6B4226;
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            width: 80%;
-            max-width: 500px;
-            text-align: center;
-        }
-        .rps-minigame {
-            display: none;
-            position: fixed;
-            z-index: 2;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.85);
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .rps-container {
-            background-color: #6B4226;
-            border-radius: 10px;
-            padding: 20px;
+        .control-panel {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
-        .rps-choices {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .rps-choice {
-            width: 70px;
-            height: 70px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 36px;
-            background-color: #A67B5B;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: transform 0.2s;
-            opacity: 0.7;
-        }
-        .rps-choice.available {
-            opacity: 1;
-            border: 2px solid gold;
-        }
-        .rps-choice:hover.available {
-            transform: scale(1.1);
+            gap: 10px;
+            margin-top: 10px;
         }
         button {
             background-color: #5D3A1F;
@@ -140,17 +75,83 @@
             padding: 10px 15px;
             border-radius: 5px;
             cursor: pointer;
-            margin: 5px;
             font-size: 16px;
-            transition: background-color 0.3s;
         }
         button:hover {
             background-color: #7E5835;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #6B4226;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 500px;
+            text-align: center;
+        }
+        .fight-area {
+            background-color: rgba(139, 69, 19, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+            min-width: 300px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        .rps-choices {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .rps-choice {
+            font-size: 30px;
+            cursor: pointer;
+            background-color: #A67B5B;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            transition: transform 0.1s;
+        }
+        .rps-choice:hover {
+            transform: scale(1.1);
+        }
+        .rps-choice.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .rps-result {
+            margin-top: 15px;
+            font-size: 18px;
+            min-height: 20px;
         }
     </style>
 </head>
 <body>
     <h1>🦖 Caveman Coffee: Maze Adventure ☕</h1>
+    
     <div class="game-container">
         <div class="stats">
             <div>Lives: <span id="lives">3</span></div>
@@ -159,64 +160,60 @@
             <div>Coffee Brewed: <span id="coffees">0</span></div>
         </div>
         
-        <div class="grid" id="grid"></div>
+        <div id="grid" class="grid"></div>
         
-        <div>
-            <button id="brew-btn" disabled>Brew Coffee (need 10 beans)</button>
+        <div class="control-panel">
+            <button id="start-btn">Start Game</button>
+            <button id="brew-btn" disabled>Brew Coffee</button>
         </div>
     </div>
     
-    <div class="modal" id="tutorial-modal">
+    <div id="fight-area" class="fight-area">
+        <h2>Battle the <span id="dino-type">Dinosaur</span>!</h2>
+        <p>Choose your weapon:</p>
+        <div class="rps-choices">
+            <div class="rps-choice" id="rock">🪨</div>
+            <div class="rps-choice disabled" id="paper">📜</div>
+            <div class="rps-choice disabled" id="scissors">✂️</div>
+        </div>
+        <div class="rps-result" id="rps-result"></div>
+        <button id="continue-btn" style="display: none;">Continue</button>
+    </div>
+    
+    <div id="tutorial-modal" class="modal">
         <div class="modal-content">
-            <h2>How to Play Caveman Coffee: Maze Adventure</h2>
-            <p>Navigate a dangerous maze to collect coffee beans while avoiding dinosaurs!</p>
+            <h2>How to Play</h2>
+            <p>Navigate the maze to find coffee beans and bring them back to your cave!</p>
             <ul style="text-align: left;">
-                <li>Click on adjacent cells to move your caveman through the maze</li>
-                <li>Your visibility is limited - you can only see 2 spaces around you</li>
-                <li>Collect coffee beans (🫘) to brew coffee</li>
-                <li>Find scissors (✂️) and paper (📜) to enhance your combat options</li>
-                <li>Different dinosaurs roam the maze - they'll chase you if they see you</li>
-                <li>When a dinosaur catches you, defeat it in rock-paper-scissors</li>
-                <li>Return to your cave (🏠) to brew coffee</li>
+                <li>Click adjacent squares to move your caveman</li>
+                <li>Collect coffee beans (🫘) and return to your cave (🏠)</li>
+                <li>Find tools (✂️ & 📜) to help in dinosaur battles</li>
+                <li>Defeat dinosaurs with rock-paper-scissors</li>
+                <li>Brew coffee to win!</li>
             </ul>
-            <button id="start-game">Start Game</button>
+            <button id="tutorial-close">Start Game</button>
         </div>
     </div>
     
-    <div class="modal" id="game-over-modal">
+    <div id="game-over-modal" class="modal">
         <div class="modal-content">
             <h2>Game Over!</h2>
-            <p>You were defeated by dinosaurs!</p>
+            <p>You were eaten by dinosaurs!</p>
             <p>Coffee Brewed: <span id="final-score">0</span></p>
-            <button id="restart-game">Play Again</button>
-        </div>
-    </div>
-    
-    <div class="rps-minigame" id="rps-minigame">
-        <div class="rps-container">
-            <div id="rps-title">Battle the Dinosaur!</div>
-            
-            <div id="rps-result">Choose your weapon!</div>
-            
-            <div class="rps-choices">
-                <div class="rps-choice available" id="choice-rock">🪨</div>
-                <div class="rps-choice" id="choice-paper">📜</div>
-                <div class="rps-choice" id="choice-scissors">✂️</div>
-            </div>
-            
-            <button id="continue-btn" style="display: none;">Continue</button>
+            <button id="restart-btn">Play Again</button>
         </div>
     </div>
 
     <script>
         // Game state
-        const state = {
+        const gameState = {
             player: { x: 1, y: 1, emoji: '🧔' },
+            cave: { x: 8, y: 8, emoji: '🏠' },
             maze: [],
             beans: [],
             dinosaurs: [],
             items: [],
-            cave: { x: 8, y: 8 },
+            gridSize: 10,
             inventory: {
                 beans: 0,
                 tools: ['rock']
@@ -225,13 +222,8 @@
                 lives: 3,
                 coffeesBrewed: 0
             },
-            gridSize: 10,
-            rps: {
-                active: false,
-                opponent: null,
-                result: null
-            },
-            turnInProgress: false
+            fighting: null,
+            gameStarted: false
         };
 
         // Dinosaur types
@@ -241,79 +233,50 @@
             { emoji: '🦡', name: 'Raptor', preference: 'scissors', sight: 4 }
         ];
 
-        // DOM elements
+        // DOM Elements
         const gridEl = document.getElementById('grid');
         const livesEl = document.getElementById('lives');
         const beansEl = document.getElementById('beans');
         const toolsEl = document.getElementById('tools');
         const coffeesEl = document.getElementById('coffees');
+        const startBtn = document.getElementById('start-btn');
         const brewBtn = document.getElementById('brew-btn');
+        const fightArea = document.getElementById('fight-area');
+        const dinoTypeEl = document.getElementById('dino-type');
+        const rpsResult = document.getElementById('rps-result');
+        const continueBtn = document.getElementById('continue-btn');
         const tutorialModal = document.getElementById('tutorial-modal');
         const gameOverModal = document.getElementById('game-over-modal');
         const finalScoreEl = document.getElementById('final-score');
-        const rpsMinigame = document.getElementById('rps-minigame');
-        const rpsTitle = document.getElementById('rps-title');
-        const rpsResult = document.getElementById('rps-result');
-        const choiceRockEl = document.getElementById('choice-rock');
-        const choicePaperEl = document.getElementById('choice-paper');
-        const choiceScissorsEl = document.getElementById('choice-scissors');
-        const continueBtn = document.getElementById('continue-btn');
-
+        const restartBtn = document.getElementById('restart-btn');
+        const tutorialCloseBtn = document.getElementById('tutorial-close');
+        
         // Initialize the game
         function initGame() {
+            // Create the grid
             createGrid();
-            updateStats();
+            
+            // Set up event listeners
+            startBtn.addEventListener('click', startGame);
             brewBtn.addEventListener('click', brewCoffee);
-            document.getElementById('start-game').addEventListener('click', startGame);
-            document.getElementById('restart-game').addEventListener('click', restartGame);
+            document.getElementById('rock').addEventListener('click', () => makeChoice('rock'));
+            document.getElementById('paper').addEventListener('click', () => makeChoice('paper'));
+            document.getElementById('scissors').addEventListener('click', () => makeChoice('scissors'));
+            continueBtn.addEventListener('click', endFight);
+            restartBtn.addEventListener('click', restartGame);
+            tutorialCloseBtn.addEventListener('click', () => {
+                tutorialModal.style.display = 'none';
+            });
             
-            // RPS minigame event listeners
-            choiceRockEl.addEventListener('click', () => makeRPSChoice('rock'));
-            choicePaperEl.addEventListener('click', () => makeRPSChoice('paper'));
-            choiceScissorsEl.addEventListener('click', () => makeRPSChoice('scissors'));
-            continueBtn.addEventListener('click', finishRPSMinigame);
-            
+            // Show tutorial on first load
             tutorialModal.style.display = 'flex';
         }
-
-        function startGame() {
-            tutorialModal.style.display = 'none';
-            generateSimpleMaze();
-            placeEntities();
-            updateFogOfWar();
-            renderEntities();
-        }
-
-        function restartGame() {
-            // Reset game state
-            state.player = { x: 1, y: 1, emoji: '🧔' };
-            state.beans = [];
-            state.dinosaurs = [];
-            state.items = [];
-            state.inventory.beans = 0;
-            state.inventory.tools = ['rock'];
-            state.stats.lives = 3;
-            state.stats.coffeesBrewed = 0;
-            state.rps.active = false;
-            state.rps.result = null;
-            
-            // Reset UI
-            updateStats();
-            updateToolsDisplay();
-            gameOverModal.style.display = 'none';
-            
-            // Restart game
-            generateSimpleMaze();
-            placeEntities();
-            updateFogOfWar();
-            renderEntities();
-        }
-
+        
         // Create the grid
         function createGrid() {
             gridEl.innerHTML = '';
-            for (let y = 0; y < state.gridSize; y++) {
-                for (let x = 0; x < state.gridSize; x++) {
+            for (let y = 0; y < gameState.gridSize; y++) {
+                for (let x = 0; x < gameState.gridSize; x++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
                     cell.dataset.x = x;
@@ -323,250 +286,283 @@
                 }
             }
         }
-
-        // Generate a simple maze
-        function generateSimpleMaze() {
-            // Initialize empty maze
-            state.maze = [];
-            for (let y = 0; y < state.gridSize; y++) {
-                const row = [];
-                for (let x = 0; x < state.gridSize; x++) {
-                    // Border walls
-                    if (x === 0 || y === 0 || x === state.gridSize - 1 || y === state.gridSize - 1) {
-                        row.push(1); // wall
-                    } 
-                    // Some random walls inside
-                    else if (Math.random() < 0.25 && !(x === 1 && y === 1) && !(x === state.cave.x && y === state.cave.y)) {
-                        row.push(1); // wall
-                    } 
-                    else {
-                        row.push(0); // passage
-                    }
-                }
-                state.maze.push(row);
-            }
+        
+        // Start the game
+        function startGame() {
+            if (gameState.gameStarted) return;
             
-            // Make sure player start and cave are passages
-            state.maze[1][1] = 0;
-            state.maze[state.cave.y][state.cave.x] = 0;
+            // Generate maze layout
+            generateMaze();
             
-            // Ensure the cave is accessible (simple for now)
-            state.maze[state.cave.y][state.cave.x-1] = 0; // Ensure there's a path to the cave
-            state.maze[state.cave.y-1][state.cave.x] = 0;
+            // Place entities
+            placeEntities();
             
-            // Reset cell classes
-            for (let y = 0; y < state.gridSize; y++) {
-                for (let x = 0; x < state.gridSize; x++) {
-                    const cell = getCellAt(x, y);
-                    if (cell) {
-                        cell.className = 'cell';
-                        if (state.maze[y][x] === 1) {
-                            cell.classList.add('wall');
-                        }
-                    }
-                }
-            }
+            // Update UI
+            updateUI();
+            
+            // Hide start button
+            startBtn.style.display = 'none';
+            
+            gameState.gameStarted = true;
         }
-
+        
+        // Generate maze
+        function generateMaze() {
+            // Create empty maze
+            gameState.maze = [];
+            
+            for (let y = 0; y < gameState.gridSize; y++) {
+                const row = [];
+                for (let x = 0; x < gameState.gridSize; x++) {
+                    // Border walls
+                    if (x === 0 || y === 0 || x === gameState.gridSize - 1 || y === gameState.gridSize - 1) {
+                        row.push(1); // Wall
+                    }
+                    // Some internal walls (25% chance)
+                    else if (Math.random() < 0.25 && 
+                             !(x === gameState.player.x && y === gameState.player.y) && 
+                             !(x === gameState.cave.x && y === gameState.cave.y)) {
+                        row.push(1); // Wall
+                    }
+                    else {
+                        row.push(0); // Path
+                    }
+                }
+                gameState.maze.push(row);
+            }
+            
+            // Ensure player and cave positions are paths
+            gameState.maze[gameState.player.y][gameState.player.x] = 0;
+            gameState.maze[gameState.cave.y][gameState.cave.x] = 0;
+            
+            // Ensure a path to the cave
+            gameState.maze[gameState.cave.y-1][gameState.cave.x] = 0;
+            gameState.maze[gameState.cave.y][gameState.cave.x-1] = 0;
+        }
+        
         // Place entities in the maze
         function placeEntities() {
             // Clear entities
-            state.beans = [];
-            state.dinosaurs = [];
-            state.items = [];
+            gameState.beans = [];
+            gameState.dinosaurs = [];
+            gameState.items = [];
             
-            // Set player at start position
-            state.player.x = 1;
-            state.player.y = 1;
-            
-            // Place beans
+            // Place beans (10-15)
             for (let i = 0; i < 15; i++) {
-                const pos = findOpenSpace();
+                const pos = findEmptyCell();
                 if (pos) {
-                    state.beans.push({ x: pos.x, y: pos.y, emoji: '🫘' });
+                    gameState.beans.push({ x: pos.x, y: pos.y, emoji: '🫘' });
                 }
             }
             
-            // Place dinosaurs
-            for (let i = 0; i < dinoTypes.length; i++) {
-                const type = dinoTypes[i];
-                const pos = findOpenSpace();
+            // Place dinosaurs (3)
+            for (let i = 0; i < 3; i++) {
+                const pos = findEmptyCell();
                 if (pos) {
-                    state.dinosaurs.push({
+                    const dinoType = dinoTypes[i % dinoTypes.length];
+                    gameState.dinosaurs.push({
                         x: pos.x,
                         y: pos.y,
-                        emoji: type.emoji,
-                        type: type.name,
-                        preference: type.preference,
-                        sight: type.sight
+                        emoji: dinoType.emoji,
+                        type: dinoType.name,
+                        preference: dinoType.preference
                     });
                 }
             }
             
             // Place scissors
-            const scissorsPos = findOpenSpace();
+            const scissorsPos = findEmptyCell();
             if (scissorsPos) {
-                state.items.push({ x: scissorsPos.x, y: scissorsPos.y, emoji: '✂️', type: 'scissors' });
+                gameState.items.push({ 
+                    x: scissorsPos.x, 
+                    y: scissorsPos.y, 
+                    emoji: '✂️', 
+                    type: 'scissors' 
+                });
             }
             
             // Place paper
-            const paperPos = findOpenSpace();
+            const paperPos = findEmptyCell();
             if (paperPos) {
-                state.items.push({ x: paperPos.x, y: paperPos.y, emoji: '📜', type: 'paper' });
+                gameState.items.push({ 
+                    x: paperPos.x, 
+                    y: paperPos.y, 
+                    emoji: '📜', 
+                    type: 'paper' 
+                });
             }
         }
         
-        // Find an open space in the maze
-        function findOpenSpace() {
+        // Find an empty cell in the maze
+        function findEmptyCell() {
             let attempts = 0;
+            
             while (attempts < 50) {
-                const x = Math.floor(Math.random() * (state.gridSize - 2)) + 1;
-                const y = Math.floor(Math.random() * (state.gridSize - 2)) + 1;
+                const x = Math.floor(Math.random() * (gameState.gridSize - 2)) + 1;
+                const y = Math.floor(Math.random() * (gameState.gridSize - 2)) + 1;
                 
-                // Check if it's a passage and not occupied
-                if (state.maze[y][x] === 0 && !isPositionOccupied(x, y)) {
+                // Check if it's a path and not occupied
+                if (gameState.maze[y][x] === 0 && isEmptyCell(x, y)) {
                     return { x, y };
                 }
                 
                 attempts++;
             }
+            
             return null;
         }
         
-        // Check if position is occupied
-        function isPositionOccupied(x, y) {
-            // Check for player
-            if (state.player.x === x && state.player.y === y) return true;
+        // Check if a cell is empty
+        function isEmptyCell(x, y) {
+            // Check player
+            if (gameState.player.x === x && gameState.player.y === y) return false;
             
-            // Check for cave
-            if (state.cave.x === x && state.cave.y === y) return true;
+            // Check cave
+            if (gameState.cave.x === x && gameState.cave.y === y) return false;
             
-            // Check for beans
-            if (state.beans.some(bean => bean.x === x && bean.y === y)) return true;
+            // Check beans
+            if (gameState.beans.some(bean => bean.x === x && bean.y === y)) return false;
             
-            // Check for dinosaurs
-            if (state.dinosaurs.some(dino => dino.x === x && dino.y === y)) return true;
+            // Check dinosaurs
+            if (gameState.dinosaurs.some(dino => dino.x === x && dino.y === y)) return false;
             
-            // Check for items
-            if (state.items.some(item => item.x === x && item.y === y)) return true;
+            // Check items
+            if (gameState.items.some(item => item.x === x && item.y === y)) return false;
             
-            return false;
+            return true;
         }
         
         // Handle cell click
         function handleCellClick(x, y) {
-            if (state.turnInProgress || state.rps.active) return;
+            if (!gameState.gameStarted || gameState.fighting) return;
             
-            // Check if the clicked cell is adjacent to the player
-            const dx = Math.abs(x - state.player.x);
-            const dy = Math.abs(y - state.player.y);
+            // Check if adjacent to player
+            const dx = Math.abs(x - gameState.player.x);
+            const dy = Math.abs(y - gameState.player.y);
             
-            // Must be adjacent (non-diagonal) and a valid passage
-            if (dx + dy === 1 && state.maze[y][x] === 0) {
+            // Must be adjacent (non-diagonal) and not a wall
+            if (dx + dy === 1 && gameState.maze[y][x] === 0) {
                 movePlayer(x, y);
             }
         }
         
-        // Move player to x,y
+        // Move player
         function movePlayer(x, y) {
-            state.turnInProgress = true;
-            
             // Update player position
-            state.player.x = x;
-            state.player.y = y;
+            gameState.player.x = x;
+            gameState.player.y = y;
             
-            // Check collisions
+            // Check for collisions
             checkCollisions();
             
-            // Update fog and render
-            updateFogOfWar();
-            renderEntities();
+            // Move dinosaurs
+            moveDinosaurs();
             
-            // Move dinosaurs (after a delay)
-            setTimeout(() => {
-                moveDinosaurs();
-                updateFogOfWar();
-                renderEntities();
+            // Check for dinosaur collisions
+            checkDinosaurCollisions();
+            
+            // Update UI
+            updateUI();
+        }
+        
+        // Check for collisions with items/beans
+        function checkCollisions() {
+            // Check for bean collision
+            const beanIndex = gameState.beans.findIndex(bean => 
+                bean.x === gameState.player.x && bean.y === gameState.player.y
+            );
+            
+            if (beanIndex !== -1) {
+                gameState.inventory.beans++;
+                gameState.beans.splice(beanIndex, 1);
+            }
+            
+            // Check for item collision
+            const itemIndex = gameState.items.findIndex(item => 
+                item.x === gameState.player.x && item.y === gameState.player.y
+            );
+            
+            if (itemIndex !== -1) {
+                const item = gameState.items[itemIndex];
                 
-                // Check for dinosaur collisions
-                setTimeout(() => {
-                    checkDinosaurCollisions();
-                    state.turnInProgress = false;
-                }, 200);
-            }, 300);
-        }
-        
-        // Update fog of war
-        function updateFogOfWar() {
-            // First make everything foggy
-            for (let y = 0; y < state.gridSize; y++) {
-                for (let x = 0; x < state.gridSize; x++) {
-                    const cell = getCellAt(x, y);
-                    if (cell) {
-                        cell.classList.add('fog');
-                        if (state.maze[y][x] === 1) {
-                            cell.classList.add('wall');
-                        }
-                    }
+                if (!gameState.inventory.tools.includes(item.type)) {
+                    gameState.inventory.tools.push(item.type);
                 }
+                
+                gameState.items.splice(itemIndex, 1);
+                
+                // Update tool visibility in fight area
+                updateToolAvailability();
             }
             
-            // Then reveal area around player
-            const visibilityRange = 2;
-            for (let dy = -visibilityRange; dy <= visibilityRange; dy++) {
-                for (let dx = -visibilityRange; dx <= visibilityRange; dx++) {
-                    const x = state.player.x + dx;
-                    const y = state.player.y + dy;
+            // Check if at cave
+            if (gameState.player.x === gameState.cave.x && gameState.player.y === gameState.cave.y) {
+                brewBtn.disabled = gameState.inventory.beans < 10;
+            } else {
+                brewBtn.disabled = true;
+            }
+        }
+        
+        // Update tool availability in the fight area
+        function updateToolAvailability() {
+            document.getElementById('rock').classList.toggle('disabled', !gameState.inventory.tools.includes('rock'));
+            document.getElementById('paper').classList.toggle('disabled', !gameState.inventory.tools.includes('paper'));
+            document.getElementById('scissors').classList.toggle('disabled', !gameState.inventory.tools.includes('scissors'));
+        }
+        
+        // Check for collisions with dinosaurs
+        function checkDinosaurCollisions() {
+            for (let i = 0; i < gameState.dinosaurs.length; i++) {
+                const dino = gameState.dinosaurs[i];
+                
+                if (dino.x === gameState.player.x && dino.y === gameState.player.y) {
+                    // Start fight
+                    startFight(dino);
+                    break;
+                }
+            }
+        }
+        
+        // Move dinosaurs
+        function moveDinosaurs() {
+            gameState.dinosaurs.forEach(dino => {
+                // Simple movement - move randomly with 50% chance
+                if (Math.random() < 0.5) {
+                    // Possible directions: up, right, down, left
+                    const directions = [
+                        { dx: 0, dy: -1 },
+                        { dx: 1, dy: 0 },
+                        { dx: 0, dy: 1 },
+                        { dx: -1, dy: 0 }
+                    ];
                     
-                    // Check bounds
-                    if (x >= 0 && x < state.gridSize && y >= 0 && y < state.gridSize) {
-                        const cell = getCellAt(x, y);
-                        if (cell) {
-                            cell.classList.remove('fog');
+                    // Shuffle directions
+                    for (let i = directions.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [directions[i], directions[j]] = [directions[j], directions[i]];
+                    }
+                    
+                    // Try each direction
+                    for (const dir of directions) {
+                        const newX = dino.x + dir.dx;
+                        const newY = dino.y + dir.dy;
+                        
+                        // Check if valid move
+                        if (newX > 0 && newX < gameState.gridSize - 1 && 
+                            newY > 0 && newY < gameState.gridSize - 1 && 
+                            gameState.maze[newY][newX] === 0 && 
+                            isEmptyCell(newX, newY)) {
+                            
+                            dino.x = newX;
+                            dino.y = newY;
+                            break;
                         }
                     }
                 }
-            }
+            });
         }
         
-        // Render all entities
-        function renderEntities() {
-            // Clear entity contents except walls
-            document.querySelectorAll('.cell').forEach(cell => {
-                if (!cell.classList.contains('wall')) {
-                    cell.innerHTML = '';
-                } else if (!cell.classList.contains('fog')) {
-                    cell.innerHTML = '🌿';
-                }
-            });
+        // Start fight with dinosaur
+        function startFight(dino) {
+            gameState.fighting = dino;
             
-            // Render cave
-            const caveCell = getCellAt(state.cave.x, state.cave.y);
-            if (caveCell && !caveCell.classList.contains('fog')) {
-                caveCell.innerHTML = '🏠';
-            }
-            
-            // Render player
-            const playerCell = getCellAt(state.player.x, state.player.y);
-            if (playerCell) {
-                playerCell.innerHTML = state.player.emoji;
-            }
-            
-            // Render beans
-            state.beans.forEach(bean => {
-                const cell = getCellAt(bean.x, bean.y);
-                if (cell && !cell.classList.contains('fog')) {
-                    cell.innerHTML = bean.emoji;
-                }
-            });
-            
-            // Render dinosaurs
-            state.dinosaurs.forEach(dino => {
-                const cell = getCellAt(dino.x, dino.y);
-                if (cell && !cell.classList.contains('fog')) {
-                    cell.innerHTML = dino.emoji;
-                }
-            });
-            
-            // Render items
-            state.items.forEach(ite
