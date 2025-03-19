@@ -50,20 +50,102 @@
         .wall {
             background-color: #228B22 !important;
         }
-        .dino-container {
-            position: relative;
+        .fog {
+            background-color: #333 !important;
+            color: transparent;
+        }
+        .stats {
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 20px;
+            background-color: #5D3A1F;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .control-panel {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        button {
+            background-color: #5D3A1F;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #7E5835;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
             justify-content: center;
+            align-items: center;
         }
-        .dino-hat {
+        .modal-content {
+            background-color: #6B4226;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 500px;
+            text-align: center;
+        }
+        .fight-area {
+            background-color: rgba(139, 69, 19, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
             position: absolute;
-            top: -12px;
-            font-size: 20px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+            min-width: 300px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
-        .dino {
-            font-size: 24px;
+        .rps-choices {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .rps-choice {
+            font-size: 30px;
+            cursor: pointer;
+            background-color: #A67B5B;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            transition: transform 0.1s;
+        }
+        .rps-choice:hover {
+            transform: scale(1.1);
+        }
+        .rps-choice.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .rps-result {
+            margin-top: 15px;
+            font-size: 18px;
+            min-height: 20px;
         }
     </style>
 </head>
@@ -85,92 +167,398 @@
             <button id="brew-btn" disabled>Brew Coffee</button>
         </div>
     </div>
+    
+    <div id="fight-area" class="fight-area">
+        <h2>Battle the <span id="dino-type">Dinosaur</span>!</h2>
+        <p>Choose your weapon:</p>
+        <div class="rps-choices">
+            <div class="rps-choice" id="rock">🪨</div>
+            <div class="rps-choice disabled" id="paper">📜</div>
+            <div class="rps-choice disabled" id="scissors">✂️</div>
+        </div>
+        <div class="rps-result" id="rps-result"></div>
+        <button id="continue-btn" style="display: none;">Continue</button>
+    </div>
+    
+    <div id="tutorial-modal" class="modal">
+        <div class="modal-content">
+            <h2>How to Play</h2>
+            <p>Navigate the maze to find coffee beans and bring them back to your cave!</p>
+            <ul style="text-align: left;">
+                <li>Click adjacent squares to move your caveman</li>
+                <li>Collect coffee beans (🫘) and return to your cave (🏠)</li>
+                <li>Find tools (✂️ & 📜) to help in dinosaur battles</li>
+                <li>Defeat dinosaurs with rock-paper-scissors</li>
+                <li>Brew coffee to win!</li>
+            </ul>
+            <button id="tutorial-close">Start Game</button>
+        </div>
+    </div>
+    
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <h2>Game Over!</h2>
+            <p>You were eaten by dinosaurs!</p>
+            <p>Coffee Brewed: <span id="final-score">0</span></p>
+            <button id="restart-btn">Play Again</button>
+        </div>
+    </div>
 
     <script>
-        const gridSize = 10;
-        const hats = ['🎩', '🧢', '🎓'];
-        const dinoTypes = [
-            { emoji: '🦖', name: 'T-Rex' },
-            { emoji: '🦕', name: 'Brontosaurus' },
-            { emoji: '🦡', name: 'Raptor' }
-        ];
-        let dinosaurs = [];
+        // Game state
+        const gameState = {
+            player: { x: 1, y: 1, emoji: '🧔' },
+            cave: { x: 8, y: 8, emoji: '🏠' },
+            maze: [],
+            beans: [],
+            dinosaurs: [],
+            items: [],
+            gridSize: 10,
+            inventory: {
+                beans: 0,
+                tools: ['rock']
+            },
+            stats: {
+                lives: 3,
+                coffeesBrewed: 0
+            },
+            fighting: null,
+            gameStarted: false
+        };
 
+        // Dinosaur types with hats
+        const dinoTypes = [
+            { emoji: '🦖', name: 'T-Rex', preference: 'rock', sight: 3 },
+            { emoji: '🦕', name: 'Brontosaurus', preference: 'paper', sight: 3 },
+            { emoji: '🦡', name: 'Raptor', preference: 'scissors', sight: 4 }
+        ];
+
+        // Hats array
+        const hats = ['🎩', '🧢', '🎓'];
+
+        // DOM Elements
+        const gridEl = document.getElementById('grid');
+        const livesEl = document.getElementById('lives');
+        const beansEl = document.getElementById('beans');
+        const toolsEl = document.getElementById('tools');
+        const coffeesEl = document.getElementById('coffees');
+        const startBtn = document.getElementById('start-btn');
+        const brewBtn = document.getElementById('brew-btn');
+        const fightArea = document.getElementById('fight-area');
+        const dinoTypeEl = document.getElementById('dino-type');
+        const rpsResult = document.getElementById('rps-result');
+        const continueBtn = document.getElementById('continue-btn');
+        const tutorialModal = document.getElementById('tutorial-modal');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreEl = document.getElementById('final-score');
+        const restartBtn = document.getElementById('restart-btn');
+        const tutorialCloseBtn = document.getElementById('tutorial-close');
+        
+        // Initialize the game
+        function initGame() {
+            // Create the grid
+            createGrid();
+            
+            // Set up event listeners
+            startBtn.addEventListener('click', startGame);
+            brewBtn.addEventListener('click', brewCoffee);
+            document.getElementById('rock').addEventListener('click', () => makeChoice('rock'));
+            document.getElementById('paper').addEventListener('click', () => makeChoice('paper'));
+            document.getElementById('scissors').addEventListener('click', () => makeChoice('scissors'));
+            continueBtn.addEventListener('click', endFight);
+            restartBtn.addEventListener('click', restartGame);
+            tutorialCloseBtn.addEventListener('click', () => {
+                tutorialModal.style.display = 'none';
+            });
+            
+            // Show tutorial on first load
+            tutorialModal.style.display = 'flex';
+        }
+        
+        // Create the grid
         function createGrid() {
-            const gridEl = document.getElementById('grid');
             gridEl.innerHTML = '';
-            for (let y = 0; y < gridSize; y++) {
-                for (let x = 0; x < gridSize; x++) {
+            for (let y = 0; y < gameState.gridSize; y++) {
+                for (let x = 0; x < gameState.gridSize; x++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
                     cell.dataset.x = x;
                     cell.dataset.y = y;
+                    cell.addEventListener('click', () => handleCellClick(x, y));
                     gridEl.appendChild(cell);
                 }
             }
+        }
+        
+        // Start the game
+        function startGame() {
+            if (gameState.gameStarted) return;
+            
+            // Generate maze layout
+            generateMaze();
+            
+            // Place entities
             placeEntities();
+            
+            // Update UI
+            updateUI();
+            
+            // Hide start button
+            startBtn.style.display = 'none';
+            
+            gameState.gameStarted = true;
         }
-
+        
+        // Generate maze
+        function generateMaze() {
+            // Create empty maze
+            gameState.maze = [];
+            
+            for (let y = 0; y < gameState.gridSize; y++) {
+                const row = [];
+                for (let x = 0; x < gameState.gridSize; x++) {
+                    // Border walls
+                    if (x === 0 || y === 0 || x === gameState.gridSize - 1 || y === gameState.gridSize - 1) {
+                        row.push(1); // Wall
+                    }
+                    // Some internal walls (25% chance)
+                    else if (Math.random() < 0.25 && 
+                             !(x === gameState.player.x && y === gameState.player.y) && 
+                             !(x === gameState.cave.x && y === gameState.cave.y)) {
+                        row.push(1); // Wall
+                    }
+                    else {
+                        row.push(0); // Path
+                    }
+                }
+                gameState.maze.push(row);
+            }
+            
+            // Ensure player and cave positions are paths
+            gameState.maze[gameState.player.y][gameState.player.x] = 0;
+            gameState.maze[gameState.cave.y][gameState.cave.x] = 0;
+            
+            // Ensure a path to the cave
+            gameState.maze[gameState.cave.y-1][gameState.cave.x] = 0;
+            gameState.maze[gameState.cave.y][gameState.cave.x-1] = 0;
+        }
+        
+        // Place entities in the maze
         function placeEntities() {
-            placeDinosaurs();
-            placeCoffeeBeans();
-        }
-
-        function placeDinosaurs() {
-            dinosaurs = [];
+            // Clear entities
+            gameState.beans = [];
+            gameState.dinosaurs = [];
+            gameState.items = [];
+            
+            // Place beans (10-15)
+            for (let i = 0; i < 15; i++) {
+                const pos = findEmptyCell();
+                if (pos) {
+                    gameState.beans.push({ x: pos.x, y: pos.y, emoji: '🫘' });
+                }
+            }
+            
+            // Place dinosaurs (3)
             for (let i = 0; i < 3; i++) {
                 const pos = findEmptyCell();
-                if (!pos) continue;
-
-                const dinoType = dinoTypes[i % dinoTypes.length];
-                const randomHat = hats[Math.floor(Math.random() * hats.length)];
-
-                dinosaurs.push({ x: pos.x, y: pos.y, emoji: dinoType.emoji, hat: randomHat });
-
-                const cell = document.querySelector(`.cell[data-x="${pos.x}"][data-y="${pos.y}"]`);
-                if (cell) {
-                    const dinoContainer = document.createElement('div');
-                    dinoContainer.className = 'dino-container';
-                    dinoContainer.innerHTML = `
-                        <div class="dino-hat">${randomHat}</div>
-                        <div class="dino">${dinoType.emoji}</div>
-                    `;
-                    cell.innerHTML = '';
-                    cell.appendChild(dinoContainer);
+                if (pos) {
+                    const dinoType = dinoTypes[i % dinoTypes.length];
+                    // Add a random hat to the dinosaur
+                    const randomHat = hats[Math.floor(Math.random() * hats.length)];
+                    const dinoWithHat = dinoType.emoji + randomHat;
+                    
+                    gameState.dinosaurs.push({
+                        x: pos.x,
+                        y: pos.y,
+                        emoji: dinoWithHat,
+                        type: dinoType.name,
+                        preference: dinoType.preference,
+                        hat: randomHat
+                    });
                 }
             }
-        }
-
-        function placeCoffeeBeans() {
-            for (let i = 0; i < 10; i++) {
-                const pos = findEmptyCell();
-                if (!pos) continue;
-
-                const cell = document.querySelector(`.cell[data-x="${pos.x}"][data-y="${pos.y}"]`);
-                if (cell) {
-                    cell.innerHTML = '🫘';
-                }
+            
+            // Place scissors
+            const scissorsPos = findEmptyCell();
+            if (scissorsPos) {
+                gameState.items.push({ 
+                    x: scissorsPos.x, 
+                    y: scissorsPos.y, 
+                    emoji: '✂️', 
+                    type: 'scissors' 
+                });
+            }
+            
+            // Place paper
+            const paperPos = findEmptyCell();
+            if (paperPos) {
+                gameState.items.push({ 
+                    x: paperPos.x, 
+                    y: paperPos.y, 
+                    emoji: '📜', 
+                    type: 'paper' 
+                });
             }
         }
-
+        
+        // Find an empty cell in the maze
         function findEmptyCell() {
             let attempts = 0;
+            
             while (attempts < 50) {
-                const x = Math.floor(Math.random() * gridSize);
-                const y = Math.floor(Math.random() * gridSize);
-
-                const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-                if (cell && !cell.hasChildNodes()) {
+                const x = Math.floor(Math.random() * (gameState.gridSize - 2)) + 1;
+                const y = Math.floor(Math.random() * (gameState.gridSize - 2)) + 1;
+                
+                // Check if it's a path and not occupied
+                if (gameState.maze[y][x] === 0 && isEmptyCell(x, y)) {
                     return { x, y };
                 }
+                
                 attempts++;
             }
+            
             return null;
         }
-
-        document.getElementById('start-btn').addEventListener('click', createGrid);
-
-        createGrid();
-    </script>
-</body>
-</html>
+        
+        // Check if a cell is empty
+        function isEmptyCell(x, y) {
+            // Check player
+            if (gameState.player.x === x && gameState.player.y === y) return false;
+            
+            // Check cave
+            if (gameState.cave.x === x && gameState.cave.y === y) return false;
+            
+            // Check beans
+            if (gameState.beans.some(bean => bean.x === x && bean.y === y)) return false;
+            
+            // Check dinosaurs
+            if (gameState.dinosaurs.some(dino => dino.x === x && dino.y === y)) return false;
+            
+            // Check items
+            if (gameState.items.some(item => item.x === x && item.y === y)) return false;
+            
+            return true;
+        }
+        
+        // Handle cell click
+        function handleCellClick(x, y) {
+            if (!gameState.gameStarted || gameState.fighting) return;
+            
+            // Check if adjacent to player
+            const dx = Math.abs(x - gameState.player.x);
+            const dy = Math.abs(y - gameState.player.y);
+            
+            // Must be adjacent (non-diagonal) and not a wall
+            if (dx + dy === 1 && gameState.maze[y][x] === 0) {
+                movePlayer(x, y);
+            }
+        }
+        
+        // Move player
+        function movePlayer(x, y) {
+            // Update player position
+            gameState.player.x = x;
+            gameState.player.y = y;
+            
+            // Check for collisions
+            checkCollisions();
+            
+            // Move dinosaurs
+            moveDinosaurs();
+            
+            // Check for dinosaur collisions
+            checkDinosaurCollisions();
+            
+            // Update UI
+            updateUI();
+        }
+        
+        // Check for collisions with items/beans
+        function checkCollisions() {
+            // Check for bean collision
+            const beanIndex = gameState.beans.findIndex(bean => 
+                bean.x === gameState.player.x && bean.y === gameState.player.y
+            );
+            
+            if (beanIndex !== -1) {
+                gameState.inventory.beans++;
+                gameState.beans.splice(beanIndex, 1);
+            }
+            
+            // Check for item collision
+            const itemIndex = gameState.items.findIndex(item => 
+                item.x === gameState.player.x && item.y === gameState.player.y
+            );
+            
+            if (itemIndex !== -1) {
+                const item = gameState.items[itemIndex];
+                
+                if (!gameState.inventory.tools.includes(item.type)) {
+                    gameState.inventory.tools.push(item.type);
+                }
+                
+                gameState.items.splice(itemIndex, 1);
+                
+                // Update tool visibility in fight area
+                updateToolAvailability();
+            }
+            
+            // Check if at cave
+            if (gameState.player.x === gameState.cave.x && gameState.player.y === gameState.cave.y) {
+                brewBtn.disabled = gameState.inventory.beans < 10;
+            } else {
+                brewBtn.disabled = true;
+            }
+        }
+        
+        // Update tool availability in the fight area
+        function updateToolAvailability() {
+            document.getElementById('rock').classList.toggle('disabled', !gameState.inventory.tools.includes('rock'));
+            document.getElementById('paper').classList.toggle('disabled', !gameState.inventory.tools.includes('paper'));
+            document.getElementById('scissors').classList.toggle('disabled', !gameState.inventory.tools.includes('scissors'));
+        }
+        
+        // Check for collisions with dinosaurs
+        function checkDinosaurCollisions() {
+            for (let i = 0; i < gameState.dinosaurs.length; i++) {
+                const dino = gameState.dinosaurs[i];
+                
+                if (dino.x === gameState.player.x && dino.y === gameState.player.y) {
+                    // Start fight
+                    startFight(dino);
+                    break;
+                }
+            }
+        }
+        
+        // Move dinosaurs
+        function moveDinosaurs() {
+            gameState.dinosaurs.forEach(dino => {
+                // Simple movement - move randomly with 50% chance
+                if (Math.random() < 0.5) {
+                    // Possible directions: up, right, down, left
+                    const directions = [
+                        { dx: 0, dy: -1 },
+                        { dx: 1, dy: 0 },
+                        { dx: 0, dy: 1 },
+                        { dx: -1, dy: 0 }
+                    ];
+                    
+                    // Shuffle directions
+                    for (let i = directions.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [directions[i], directions[j]] = [directions[j], directions[i]];
+                    }
+                    
+                    // Try each direction
+                    for (const dir of directions) {
+                        const newX = dino.x + dir.dx;
+                        const newY = dino.y + dir.dy;
+                        
+                        // Check if valid move
+                        if (newX > 0 && newX < gameState.gridSize - 1 && 
+                            newY > 0 && newY < gameState.gridSize - 1 && 
+                            gameState.maze[newY][newX] === 0 && 
+                            isEmptyCell(newX, newY)) {
+                            
+     
