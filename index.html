@@ -561,4 +561,244 @@
                             gameState.maze[newY][newX] === 0 && 
                             isEmptyCell(newX, newY)) {
                             
-     
+                            dino.x = newX;
+                            dino.y = newY;
+                            break;
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Start fight with dinosaur
+        function startFight(dino) {
+            gameState.fighting = dino;
+            dinoTypeEl.textContent = dino.type + " with a " + dino.hat;
+            rpsResult.textContent = '';
+            continueBtn.style.display = 'none';
+            updateToolAvailability();
+            fightArea.style.display = 'block';
+        }
+        
+        // Make a choice in rock-paper-scissors
+        function makeChoice(playerChoice) {
+            if (!gameState.fighting || !gameState.inventory.tools.includes(playerChoice)) return;
+            
+            // Get dinosaur choice
+            const dinoChoice = getDinoChoice();
+            
+            // Determine winner
+            let result;
+            if (playerChoice === dinoChoice) {
+                result = 'draw';
+            } else if (
+                (playerChoice === 'rock' && dinoChoice === 'scissors') ||
+                (playerChoice === 'paper' && dinoChoice === 'rock') ||
+                (playerChoice === 'scissors' && dinoChoice === 'paper')
+            ) {
+                result = 'win';
+            } else {
+                result = 'lose';
+            }
+            
+            // Show result
+            let resultHTML = '';
+            const playerEmoji = playerChoice === 'rock' ? '🪨' : playerChoice === 'paper' ? '📜' : '✂️';
+            const dinoEmoji = dinoChoice === 'rock' ? '🪨' : dinoChoice === 'paper' ? '📜' : '✂️';
+            
+            resultHTML += `You chose ${playerEmoji} | Dino chose ${dinoEmoji}<br>`;
+            
+            if (result === 'win') {
+                resultHTML += '<span style="color: lightgreen">You win! The dinosaur runs away, dropping its ' + gameState.fighting.hat + '.</span>';
+            } else if (result === 'lose') {
+                resultHTML += '<span style="color: salmon">You lose! The dinosaur attacks you, its ' + gameState.fighting.hat + ' tipping slightly.</span>';
+            } else {
+                resultHTML += '<span style="color: gold">It\'s a draw! The dinosaur adjusts its ' + gameState.fighting.hat + ' and prepares for another round.</span>';
+                continueBtn.style.display = 'none';
+                rpsResult.innerHTML = resultHTML;
+                return;
+            }
+            
+            rpsResult.innerHTML = resultHTML;
+            continueBtn.style.display = 'inline-block';
+        }
+        
+        // Get dinosaur choice
+        function getDinoChoice() {
+            const dino = gameState.fighting;
+            const rand = Math.random();
+            
+            // 60% chance to use preferred choice
+            if (rand < 0.6) {
+                return dino.preference;
+            }
+            
+            // 40% chance for random choice
+            const choices = ['rock', 'paper', 'scissors'];
+            const otherChoices = choices.filter(c => c !== dino.preference);
+            return otherChoices[Math.floor(Math.random() * otherChoices.length)];
+        }
+        
+        // End fight
+        function endFight() {
+            const resultText = rpsResult.textContent.toLowerCase();
+            
+            if (resultText.includes('win')) {
+                // Remove dinosaur
+                const index = gameState.dinosaurs.findIndex(d => d === gameState.fighting);
+                if (index !== -1) {
+                    gameState.dinosaurs.splice(index, 1);
+                }
+            } else if (resultText.includes('lose')) {
+                // Lose a life
+                gameState.stats.lives--;
+                
+                // Game over if no lives left
+                if (gameState.stats.lives <= 0) {
+                    gameOver();
+                    return;
+                }
+                
+                // Move player back to start
+                gameState.player.x = 1;
+                gameState.player.y = 1;
+            }
+            
+            // Hide fight area
+            fightArea.style.display = 'none';
+            gameState.fighting = null;
+            
+            // Update UI
+            updateUI();
+        }
+        
+        // Brew coffee
+        function brewCoffee() {
+            if (gameState.inventory.beans < 10 || 
+                gameState.player.x !== gameState.cave.x || 
+                gameState.player.y !== gameState.cave.y) return;
+            
+            // Use beans
+            gameState.inventory.beans -= 10;
+            
+            // Increment coffee count
+            gameState.stats.coffeesBrewed++;
+            
+            // Respawn beans (5)
+            for (let i = 0; i < 5; i++) {
+                const pos = findEmptyCell();
+                if (pos) {
+                    gameState.beans.push({ x: pos.x, y: pos.y, emoji: '🫘' });
+                }
+            }
+            
+            // Update UI
+            updateUI();
+        }
+        
+        // Game over
+        function gameOver() {
+            finalScoreEl.textContent = gameState.stats.coffeesBrewed;
+            gameOverModal.style.display = 'flex';
+            fightArea.style.display = 'none';
+        }
+        
+        // Restart game
+        function restartGame() {
+            // Reset game state
+            gameState.player = { x: 1, y: 1, emoji: '🧔' };
+            gameState.beans = [];
+            gameState.dinosaurs = [];
+            gameState.items = [];
+            gameState.inventory.beans = 0;
+            gameState.inventory.tools = ['rock'];
+            gameState.stats.lives = 3;
+            gameState.stats.coffeesBrewed = 0;
+            gameState.fighting = null;
+            
+            // Hide modals
+            gameOverModal.style.display = 'none';
+            
+            // Restart game
+            startGame();
+        }
+        
+        // Update UI
+        function updateUI() {
+            // Update stats
+            livesEl.textContent = gameState.stats.lives;
+            beansEl.textContent = gameState.inventory.beans + '/10';
+            coffeesEl.textContent = gameState.stats.coffeesBrewed;
+            
+            // Update tools display
+            toolsEl.textContent = gameState.inventory.tools.map(tool => {
+                return tool === 'rock' ? '🪨' : tool === 'paper' ? '📜' : '✂️';
+            }).join(' ');
+            
+            // Enable/disable brew button
+            brewBtn.disabled = !(gameState.inventory.beans >= 10 && 
+                                gameState.player.x === gameState.cave.x && 
+                                gameState.player.y === gameState.cave.y);
+            
+            // Render grid
+            renderGrid();
+        }
+        
+        // Render the grid
+        function renderGrid() {
+            // First reset all cells
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.innerHTML = '';
+                cell.className = 'cell';
+                
+                const x = parseInt(cell.dataset.x);
+                const y = parseInt(cell.dataset.y);
+                
+                if (gameState.maze[y][x] === 1) {
+                    cell.classList.add('wall');
+                    cell.textContent = '🌿';
+                }
+            });
+            
+            // Render cave
+            const caveCell = document.querySelector(`.cell[data-x="${gameState.cave.x}"][data-y="${gameState.cave.y}"]`);
+            if (caveCell) {
+                caveCell.textContent = gameState.cave.emoji;
+            }
+            
+            // Render beans
+            gameState.beans.forEach(bean => {
+                const cell = document.querySelector(`.cell[data-x="${bean.x}"][data-y="${bean.y}"]`);
+                if (cell) {
+                    cell.textContent = bean.emoji;
+                }
+            });
+            
+            // Render items
+            gameState.items.forEach(item => {
+                const cell = document.querySelector(`.cell[data-x="${item.x}"][data-y="${item.y}"]`);
+                if (cell) {
+                    cell.textContent = item.emoji;
+                }
+            });
+            
+            // Render dinosaurs
+            gameState.dinosaurs.forEach(dino => {
+                const cell = document.querySelector(`.cell[data-x="${dino.x}"][data-y="${dino.y}"]`);
+                if (cell) {
+                    cell.textContent = dino.emoji;
+                }
+            });
+            
+            // Render player (on top of everything)
+            const playerCell = document.querySelector(`.cell[data-x="${gameState.player.x}"][data-y="${gameState.player.y}"]`);
+            if (playerCell) {
+                playerCell.textContent = gameState.player.emoji;
+            }
+        }
+        
+        // Initialize game on load
+        window.onload = initGame;
+    </script>
+</body>
+</html>
