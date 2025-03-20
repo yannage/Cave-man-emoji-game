@@ -1,0 +1,177 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #8B4513;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: white;
+    margin: 0;
+    padding: 20px;
+}
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #6B4226;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    max-width: 90vw;
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(10, 40px);
+    grid-template-rows: repeat(10, 40px);
+    gap: 2px;
+    margin-bottom: 20px;
+}
+.cell {
+    width: 40px;
+    height: 40px;
+    background-color: #A67B5B;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    cursor: pointer;
+    border-radius: 5px;
+    position: relative;
+}
+.dino-container {
+    position: relative;
+    display: inline-block;
+}
+.dino-hat {
+    position: absolute;
+    top: -14px;
+    left: 3px;
+    font-size: 10px;
+    transform: rotate(15deg);
+}
+.cell:hover {
+    background-color: #C99C7D;
+}
+.wall {
+    background-color: #228B22 !important;
+}
+.fog {
+    background-color: #333 !important;
+    color: transparent;
+}
+.stats {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    margin-bottom: 20px;
+    background-color: #5D3A1F;
+    padding: 10px;
+    border-radius: 5px;
+}
+.control-panel {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+button {
+    background-color: #5D3A1F;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+button:hover {
+    background-color: #7E5835;
+}
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+}
+.modal-content {
+    background-color: #6B4226;
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 500px;
+    text-align: center;
+}
+.fight-area {
+    background-color: rgba(139, 69, 19, 0.95);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    min-width: 300px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+.rps-choices {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 20px 0;
+}
+.rps-choice {
+    font-size: 30px;
+    cursor: pointer;
+    background-color: #A67B5B;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    transition: transform 0.1s;
+}
+.rps-choice:hover {
+    transform: scale(1.1);
+}
+.rps-choice.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+.rps-result {
+    margin-top: 15px;
+    font-size: 18px;
+    min-height: 20px;
+}
+.brew-button {
+    background-color: #8B4513;
+    color: white;
+    font-weight: bold;
+    padding: 10px 15px;
+    border-radius: 5px;
+    transition: all 0.2s;
+}
+.brew-button:hover {
+    background-color: #A0522D;
+    transform: scale(1.05);
+}
+.brew-button:active {
+    transform: scale(0.95);
+}
+.dino-speech {
+    font-size: 16px;
+    font-style: italic;
+    margin: 10px 0;
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    position: relative;
+}
