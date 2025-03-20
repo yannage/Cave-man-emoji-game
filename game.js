@@ -521,3 +521,556 @@ function moveDinosaurs() {
         // Simple movement - move randomly with 50% chance
         if (Math.random() < 0.5) {
             //
+
+// Possible directions: up, right, down, left
+            const directions = [
+                { dx: 0, dy: -1 },
+                { dx: 1, dy: 0 },
+                { dx: 0, dy: 1 },
+                { dx: -1, dy: 0 }
+            ];
+            
+            // Shuffle directions
+            for (let i = directions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [directions[i], directions[j]] = [directions[j], directions[i]];
+            }
+            
+            // Try each direction
+            for (const dir of directions) {
+                const newX = dino.x + dir.dx;
+                const newY = dino.y + dir.dy;
+                
+                // Check if valid move
+                if (newX > 0 && newX < gameState.gridSize - 1 && 
+                    newY > 0 && newY < gameState.gridSize - 1 && 
+                    gameState.maze[newY][newX] === 0 && 
+                    isEmptyCell(newX, newY)) {
+                    
+                    dino.x = newX;
+                    dino.y = newY;
+                    break;
+                }
+            }
+        }
+    });
+}
+
+// Start fight with dinosaur
+function startFight(dino) {
+    gameState.fighting = dino;
+    
+    // Custom intro based on hat type
+    let introText;
+    if (dino.hat === '🎩') {
+        introText = `${dino.type} Gentleman`;
+    } else if (dino.hat === '🎓') {
+        introText = `Burnt-out Graduate ${dino.type}`;
+    } else if (dino.hat === '🧢') {
+        introText = `Punk ${dino.type}`;
+    }
+    
+    dinoTypeEl.textContent = introText;
+    rpsResult.textContent = '';
+    continueBtn.style.display = 'none';
+    updateToolAvailability();
+    
+    // Add dinosaur's pre-fight speech based on hat type
+    const speechDiv = document.createElement('div');
+    speechDiv.className = 'dino-speech';
+    
+    // Predetermined choice based on hat type
+    let actualChoice, declaredChoice;
+    
+    if (dino.hat === '🎩') {
+        // Top hat dinosaur always tells the truth about their move
+        actualChoice = getDinoChoice(dino);
+        declaredChoice = actualChoice;
+        
+        let speechText;
+        if (declaredChoice === 'rock') {
+            speechText = "I say, I shall be using rock this round. A gentleman always announces his move!";
+        } else if (declaredChoice === 'paper') {
+            speechText = "I do believe paper is the appropriate choice for this engagement.";
+        } else {
+            speechText = "Scissors shall be my weapon of choice, as any proper gentleman would declare.";
+        }
+        speechDiv.textContent = speechText;
+        
+    } else if (dino.hat === '🎓') {
+        // Graduate dinosaur always uses the same move each fight (store on the dino object)
+        if (!dino.graduateChoice) {
+            // First time fighting this graduate, assign a consistent choice
+            const choices = ['rock', 'paper', 'scissors'];
+            dino.graduateChoice = choices[Math.floor(Math.random() * choices.length)];
+        }
+        
+        actualChoice = dino.graduateChoice;
+        
+        // Disinterested speech, doesn't reveal their move
+        const speeches = [
+            "Ugh, whatever. Let's just get this over with.",
+            "I've got student loans and a thesis to finish...",
+            "I learned game theory but I'm too tired to apply it.",
+            "Same strategy as always. Why change what barely works?"
+        ];
+        speechDiv.textContent = speeches[Math.floor(Math.random() * speeches.length)];
+        
+    } else if (dino.hat === '🧢') {
+        // Punk dinosaur always lies about their move
+        actualChoice = getDinoChoice(dino);
+        
+        // Choose something that's NOT the actual choice
+        const choices = ['rock', 'paper', 'scissors'].filter(c => c !== actualChoice);
+        declaredChoice = choices[Math.floor(Math.random() * choices.length)];
+        
+        let speechText;
+        if (declaredChoice === 'rock') {
+            speechText = "Yo, I'm TOTALLY gonna use rock! *snickers*";
+        } else if (declaredChoice === 'paper') {
+            speechText = "Paper's my move, bro! Trust me! *winks mockingly*";
+        } else {
+            speechText = "Scissors, dude! That's what I'm using! *crosses fingers behind back*";
+        }
+        speechDiv.textContent = speechText;
+    }
+    
+    // Store the actual choice on the dino object for this round
+    dino.currentChoice = actualChoice;
+    
+    // Add speech bubble before the RPS choices
+    const rpsChoicesDiv = document.querySelector('.rps-choices');
+    fightArea.insertBefore(speechDiv, rpsChoicesDiv);
+    
+    fightArea.style.display = 'block';
+}
+
+// Get dinosaur choice
+function getDinoChoice(dino) {
+    if (!dino) dino = gameState.fighting;
+    
+    // If the dinosaur already has a choice for this round, return it
+    if (dino.currentChoice) {
+        return dino.currentChoice;
+    }
+    
+    const rand = Math.random();
+    
+    // 60% chance to use preferred choice
+    if (rand < 0.6) {
+        return dino.preference;
+    }
+    
+    // 40% chance for random choice
+    const choices = ['rock', 'paper', 'scissors'];
+    const otherChoices = choices.filter(c => c !== dino.preference);
+    return otherChoices[Math.floor(Math.random() * otherChoices.length)];
+}
+
+// Make a choice in rock-paper-scissors
+function makeChoice(playerChoice) {
+    if (!gameState.fighting || !gameState.inventory.tools.includes(playerChoice)) return;
+    
+    // Get dinosaur choice (already determined in startFight)
+    const dinoChoice = gameState.fighting.currentChoice;
+    
+    // Determine winner
+    let result;
+    if (playerChoice === dinoChoice) {
+        result = 'draw';
+    } else if (
+        (playerChoice === 'rock' && dinoChoice === 'scissors') ||
+        (playerChoice === 'paper' && dinoChoice === 'rock') ||
+        (playerChoice === 'scissors' && dinoChoice === 'paper')
+    ) {
+        result = 'win';
+    } else {
+        result = 'lose';
+    }
+    
+    // Show result
+    let resultHTML = '';
+    const playerEmoji = playerChoice === 'rock' ? '🪨' : playerChoice === 'paper' ? '📜' : '✂️';
+    const dinoEmoji = dinoChoice === 'rock' ? '🪨' : dinoChoice === 'paper' ? '📜' : '✂️';
+    
+    resultHTML += `You chose ${playerEmoji} | Dino chose ${dinoEmoji}<br>`;
+    
+    // Get custom dialogue based on hat type
+    const hat = gameState.fighting.hat;
+    
+    if (result === 'win') {
+        if (hat === '🎩') {
+            resultHTML += '<span style="color: lightgreen">You win! "I say, jolly good show! I shall retreat with dignity," says the dinosaur as it tips its top hat and walks away.</span>';
+        } else if (hat === '🎓') {
+            resultHTML += '<span style="color: lightgreen">You win! "Whatever. I didn\'t even study for this fight," sighs the burnt-out graduate dinosaur as it trudges away.</span>';
+        } else if (hat === '🧢') {
+            resultHTML += '<span style="color: lightgreen">You win! "This is SO unfair! I\'ll get you next time!" yells the punk dinosaur as it stomps away angrily.</span>';
+        }
+    } else if (result === 'lose') {
+        if (hat === '🎩') {
+            resultHTML += '<span style="color: salmon">You lose! "I do apologize for the inconvenience, but I must insist on eating you now," says the gentleman dinosaur, adjusting its monocle.</span>';
+        } else if (hat === '🎓') {
+            resultHTML += '<span style="color: salmon">You lose! "I\'ve got student loans to pay. Nothing personal," mumbles the graduate dinosaur with dead eyes.</span>';
+        } else if (hat === '🧢') {
+            resultHTML += '<span style="color: salmon">You lose! "HA! Take that, cave-loser! Who\'s the apex predator NOW?" taunts the punk dinosaur, high-fiving its tail.</span>';
+        }
+    } else {
+        if (hat === '🎩') {
+            resultHTML += '<span style="color: gold">It\'s a draw! "A stalemate! How intriguing. Shall we try again?" says the gentleman dinosaur, tipping its hat politely.</span>';
+        } else if (hat === '🎓') {
+            resultHTML += '<span style="color: gold">It\'s a draw! "Can we just call it a day? I\'ve got papers to grade," sighs the graduate dinosaur, looking at its watch.</span>';
+        } else if (hat === '🧢') {
+            resultHTML += '<span style="color: gold">It\'s a draw! "BOOORING! Play for real or go home!" the punk dinosaur shouts while dramatically rolling its eyes.</span>';
+        }
+        continueBtn.style.display = 'none';
+        rpsResult.innerHTML = resultHTML;
+        return;
+    }
+    
+    rpsResult.innerHTML = resultHTML;
+    continueBtn.style.display = 'inline-block';
+}
+
+// End fight
+function endFight() {
+    const resultText = rpsResult.textContent.toLowerCase();
+    
+    if (resultText.includes('win')) {
+        // Remove dinosaur
+        const index = gameState.dinosaurs.findIndex(d => d === gameState.fighting);
+        if (index !== -1) {
+            gameState.dinosaurs.splice(index, 1);
+        }
+    } else if (resultText.includes('lose')) {
+        // Lose a life
+        gameState.stats.lives--;
+        
+        // Game over if no lives left
+        if (gameState.stats.lives <= 0) {
+            gameOver();
+            return;
+        }
+        
+        // Move player back to start
+        gameState.player.x = 1;
+        gameState.player.y = 1;
+    }
+    
+    // Remove any speech bubbles
+    const speechBubbles = document.querySelectorAll('.dino-speech');
+    speechBubbles.forEach(bubble => bubble.remove());
+    
+    // Hide fight area
+    fightArea.style.display = 'none';
+    gameState.fighting = null;
+    
+    // Update UI
+    updateUI();
+}
+
+// Brew coffee
+function brewCoffee() {
+    if (gameState.inventory.beans < 10 || 
+        gameState.player.x !== gameState.cave.x || 
+        gameState.player.y !== gameState.cave.y) return;
+    
+    // Start the brewing mini-game
+    startBrewingMinigame();
+}
+
+// Start the brewing mini-game
+function startBrewingMinigame() {
+    const brewMinigame = document.getElementById('brew-minigame');
+    const brewSequence = document.getElementById('brewing-sequence');
+    const brewingInput = document.getElementById('brewing-input');
+    const brewMessage = document.getElementById('brew-message');
+    const brewStartButton = document.getElementById('brew-start');
+    const brewCancelButton = document.getElementById('brew-cancel');
+    const brewButtons = document.querySelectorAll('.brew-button');
+    
+    // Clear previous data
+    brewSequence.textContent = '';
+    brewingInput.textContent = '';
+    brewMessage.textContent = '';
+    
+    // Generate a random sequence of 4-6 brewing steps
+    const steps = ['grind', 'heat', 'pour', 'stir'];
+    const sequenceLength = Math.floor(Math.random() * 3) + 4; // 4-6 steps
+    
+    let sequence = [];
+    for (let i = 0; i < sequenceLength; i++) {
+        sequence.push(steps[Math.floor(Math.random() * steps.length)]);
+    }
+    
+    // Store sequence on the game state
+    gameState.brewingSequence = sequence;
+    gameState.playerSequence = [];
+    
+    // Display the sequence using emojis
+    const sequenceEmojis = sequence.map(step => {
+        if (step === 'grind') return '⚙️';
+        if (step === 'heat') return '🔥';
+        if (step === 'pour') return '💧';
+        if (step === 'stir') return '🔄';
+        return '';
+    });
+    
+    brewSequence.textContent = sequenceEmojis.join(' ');
+    
+    // Show the mini-game
+    brewMinigame.style.display = 'flex';
+    
+    // Set up event listeners
+    brewStartButton.onclick = () => {
+        // Hide sequence after 3 seconds
+        setTimeout(() => {
+            brewSequence.textContent = '❓ ❓ ❓ ❓ ❓ ❓'.substring(0, sequenceLength * 2 - 1);
+            
+            // Enable brew buttons
+            brewButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.onclick = () => {
+                    const action = btn.dataset.action;
+                    makeBrewingStep(action);
+                };
+            });
+            
+            brewStartButton.style.display = 'none';
+        }, 3000);
+    };
+    
+    brewCancelButton.onclick = () => {
+        brewMinigame.style.display = 'none';
+    };
+    
+    // Disable brew buttons initially
+    brewButtons.forEach(btn => {
+        btn.disabled = true;
+    });
+}
+
+// Handle a brewing step
+function makeBrewingStep(step) {
+    const brewingInput = document.getElementById('brewing-input');
+    const brewMessage = document.getElementById('brew-message');
+    
+    // Add step to player sequence
+    gameState.playerSequence.push(step);
+    
+    // Display the step using emojis
+    let emoji = '';
+    if (step === 'grind') emoji = '⚙️';
+    if (step === 'heat') emoji = '🔥';
+    if (step === 'pour') emoji = '💧';
+    if (step === 'stir') emoji = '🔄';
+    
+    // Add to displayed sequence
+    if (brewingInput.textContent === '') {
+        brewingInput.textContent = emoji;
+    } else {
+        brewingInput.textContent += ' ' + emoji;
+    }
+    
+    // Check if the sequence is complete
+    if (gameState.playerSequence.length === gameState.brewingSequence.length) {
+        // Check if the sequence is correct
+        let correct = true;
+        for (let i = 0; i < gameState.brewingSequence.length; i++) {
+            if (gameState.playerSequence[i] !== gameState.brewingSequence[i]) {
+                correct = false;
+                break;
+            }
+        }
+        
+        if (correct) {
+            // Success!
+            brewMessage.textContent = 'Perfect brew! +1 Coffee';
+            brewMessage.style.color = 'lightgreen';
+            
+            // Complete brewing process
+            completeBrewing(true);
+        } else {
+            // Failure
+            brewMessage.textContent = 'Oops! Your coffee is mediocre.';
+            brewMessage.style.color = 'salmon';
+            
+            // Complete brewing with penalty
+            setTimeout(() => {
+                completeBrewing(false);
+            }, 2000);
+        }
+        
+        // Disable brew buttons
+        document.querySelectorAll('.brew-button').forEach(btn => {
+            btn.disabled = true;
+            btn.onclick = null;
+        });
+    }
+}
+
+// Complete the brewing process
+function completeBrewing(perfect) {
+    // Close minigame
+    document.getElementById('brew-minigame').style.display = 'none';
+    
+    // Use beans
+    gameState.inventory.beans -= 10;
+    
+    // Increment coffee count
+    gameState.stats.coffeesBrewed++;
+    
+    // Calculate how many beans to spawn to reach 15 total
+    const beansToSpawn = 15 - gameState.beans.length;
+    
+    // Respawn beans up to 15 total
+    for (let i = 0; i < beansToSpawn; i++) {
+        const pos = findEmptyCell();
+        if (pos) {
+            gameState.beans.push({ x: pos.x, y: pos.y, emoji: '🫘' });
+        }
+    }
+    
+    // Spawn new dinosaurs (up to 3 total)
+    const dinosToSpawn = 3 - gameState.dinosaurs.length;
+    for (let i = 0; i < dinosToSpawn; i++) {
+        const pos = findEmptyCell();
+        if (pos) {
+            const dinoType = dinoTypes[Math.floor(Math.random() * dinoTypes.length)];
+            const randomHat = hats[Math.floor(Math.random() * hats.length)];
+            
+            gameState.dinosaurs.push({
+                x: pos.x,
+                y: pos.y,
+                emoji: dinoType.emoji,
+                type: dinoType.name,
+                preference: dinoType.preference,
+                hat: randomHat
+            });
+        }
+    }
+    
+    // Update UI
+    updateUI();
+}
+
+// Game over
+function gameOver() {
+    finalScoreEl.textContent = gameState.stats.coffeesBrewed;
+    gameOverModal.style.display = 'flex';
+    fightArea.style.display = 'none';
+}
+
+// Restart game
+function restartGame() {
+    // Reset game state
+    gameState.player = { x: 1, y: 1, emoji: '🧔' };
+    gameState.beans = [];
+    gameState.dinosaurs = [];
+    gameState.items = [];
+    gameState.inventory.beans = 0;
+    gameState.inventory.tools = ['rock'];
+    gameState.stats.lives = 3;
+    gameState.stats.coffeesBrewed = 0;
+    gameState.fighting = null;
+    
+    // Hide modals
+    gameOverModal.style.display = 'none';
+    
+    // Restart game
+    startGame();
+}
+
+// Update UI
+function updateUI() {
+    // Update stats
+    livesEl.textContent = gameState.stats.lives;
+    // Bean count is handled in checkCollisions
+    if (!(gameState.player.x === gameState.cave.x && gameState.player.y === gameState.cave.y)) {
+        beansEl.textContent = gameState.inventory.beans + '/10';
+    }
+    coffeesEl.textContent = gameState.stats.coffeesBrewed;
+    
+    // Update tools display
+    toolsEl.textContent = gameState.inventory.tools.map(tool => {
+        return tool === 'rock' ? '🪨' : tool === 'paper' ? '📜' : '✂️';
+    }).join(' ');
+    
+    // Enable/disable brew button
+    brewBtn.disabled = !(gameState.inventory.beans >= 10 && 
+                        gameState.player.x === gameState.cave.x && 
+                        gameState.player.y === gameState.cave.y);
+    
+    // Render grid
+    renderGrid();
+}
+
+// Render the grid
+function renderGrid() {
+    // First reset all cells
+    document.querySelectorAll('.cell').forEach(cell => {
+        cell.innerHTML = '';
+        cell.className = 'cell';
+        
+        const x = parseInt(cell.dataset.x);
+        const y = parseInt(cell.dataset.y);
+        
+        if (gameState.maze[y][x] === 1) {
+            cell.classList.add('wall');
+            cell.textContent = '🌿';
+        }
+    });
+    
+    // Render cave
+    const caveCell = document.querySelector(`.cell[data-x="${gameState.cave.x}"][data-y="${gameState.cave.y}"]`);
+    if (caveCell) {
+        caveCell.textContent = gameState.cave.emoji;
+    }
+    
+    // Render beans
+    gameState.beans.forEach(bean => {
+        const cell = document.querySelector(`.cell[data-x="${bean.x}"][data-y="${bean.y}"]`);
+        if (cell) {
+            cell.textContent = bean.emoji;
+        }
+    });
+    
+    // Render items
+    gameState.items.forEach(item => {
+        const cell = document.querySelector(`.cell[data-x="${item.x}"][data-y="${item.y}"]`);
+        if (cell) {
+            cell.textContent = item.emoji;
+        }
+    });
+    
+    // Render dinosaurs with hats
+    gameState.dinosaurs.forEach(dino => {
+        const cell = document.querySelector(`.cell[data-x="${dino.x}"][data-y="${dino.y}"]`);
+        if (cell) {
+            // Create a container for the dinosaur and hat
+            const dinoContainer = document.createElement('div');
+            dinoContainer.className = 'dino-container';
+            
+            // Add the dinosaur emoji
+            dinoContainer.textContent = dino.emoji;
+            
+            // Add the hat as a child element
+            const hatElement = document.createElement('div');
+            hatElement.className = 'dino-hat';
+            hatElement.textContent = dino.hat;
+            dinoContainer.appendChild(hatElement);
+            
+            // Clear the cell and add the container
+            cell.innerHTML = '';
+            cell.appendChild(dinoContainer);
+        }
+    });
+    
+    // Render player (on top of everything)
+    const playerCell = document.querySelector(`.cell[data-x="${gameState.player.x}"][data-y="${gameState.player.y}"]`);
+    if (playerCell) {
+        playerCell.textContent = gameState.player.emoji;
+    }
+}
+
+// Initialize game on load
+window.onload = initGame;
