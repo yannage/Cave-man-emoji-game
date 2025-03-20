@@ -266,3 +266,258 @@ function ensureMazeConnectivity() {
         }
     }
 }
+
+// Check if a cell is reachable from the player position
+function isReachable(targetX, targetY) {
+    // Create a copy of the maze to track visited cells
+    const visited = [];
+    for (let y = 0; y < gameState.gridSize; y++) {
+        const row = [];
+        for (let x = 0; x < gameState.gridSize; x++) {
+            row.push(false);
+        }
+        visited.push(row);
+    }
+    
+    // Flood fill from player position
+    const queue = [{x: gameState.player.x, y: gameState.player.y}];
+    visited[gameState.player.y][gameState.player.x] = true;
+    
+    while (queue.length > 0) {
+        const current = queue.shift();
+        
+        // Check if we've reached the target
+        if (current.x === targetX && current.y === targetY) {
+            return true;
+        }
+        
+        // Check all four directions
+        const directions = [
+            {dx: 0, dy: -1}, // Up
+            {dx: 1, dy: 0},  // Right
+            {dx: 0, dy: 1},  // Down
+            {dx: -1, dy: 0}  // Left
+        ];
+        
+        for (const dir of directions) {
+            const nx = current.x + dir.dx;
+            const ny = current.y + dir.dy;
+            
+            // Check if in bounds
+            if (nx < 0 || ny < 0 || nx >= gameState.gridSize || ny >= gameState.gridSize) {
+                continue;
+            }
+            
+            // If it's a path and not visited, add to queue
+            if (gameState.maze[ny][nx] === 0 && !visited[ny][nx]) {
+                queue.push({x: nx, y: ny});
+                visited[ny][nx] = true;
+            }
+        }
+    }
+    
+    // If we've exhausted the queue without finding the target, it's not reachable
+    return false;
+}
+
+// Place entities in the maze
+function placeEntities() {
+    // Clear entities
+    gameState.beans = [];
+    gameState.dinosaurs = [];
+    gameState.items = [];
+    
+    // Place beans (10-15)
+    for (let i = 0; i < 15; i++) {
+        const pos = findEmptyCell();
+        if (pos) {
+            gameState.beans.push({ x: pos.x, y: pos.y, emoji: '🫘' });
+        }
+    }
+    
+    // Place dinosaurs (3)
+    for (let i = 0; i < 3; i++) {
+        const pos = findEmptyCell();
+        if (pos) {
+            const dinoType = dinoTypes[i % dinoTypes.length];
+            // Add a random hat to the dinosaur
+            const randomHat = hats[Math.floor(Math.random() * hats.length)];
+            // We'll display the dinosaur and hat separately in the UI
+            
+            gameState.dinosaurs.push({
+                x: pos.x,
+                y: pos.y,
+                emoji: dinoType.emoji,
+                type: dinoType.name,
+                preference: dinoType.preference,
+                hat: randomHat
+            });
+        }
+    }
+    
+    // Place scissors
+    const scissorsPos = findEmptyCell();
+    if (scissorsPos) {
+        gameState.items.push({ 
+            x: scissorsPos.x, 
+            y: scissorsPos.y, 
+            emoji: '✂️', 
+            type: 'scissors' 
+        });
+    }
+    
+    // Place paper
+    const paperPos = findEmptyCell();
+    if (paperPos) {
+        gameState.items.push({ 
+            x: paperPos.x, 
+            y: paperPos.y, 
+            emoji: '📜', 
+            type: 'paper' 
+        });
+    }
+}
+
+// Find an empty cell in the maze
+function findEmptyCell() {
+    let attempts = 0;
+    
+    while (attempts < 50) {
+        const x = Math.floor(Math.random() * (gameState.gridSize - 2)) + 1;
+        const y = Math.floor(Math.random() * (gameState.gridSize - 2)) + 1;
+        
+        // Check if it's a path and not occupied
+        if (gameState.maze[y][x] === 0 && isEmptyCell(x, y)) {
+            return { x, y };
+        }
+        
+        attempts++;
+    }
+    
+    return null;
+}
+
+// Check if a cell is empty
+function isEmptyCell(x, y) {
+    // Check player
+    if (gameState.player.x === x && gameState.player.y === y) return false;
+    
+    // Check cave
+    if (gameState.cave.x === x && gameState.cave.y === y) return false;
+    
+    // Check beans
+    if (gameState.beans.some(bean => bean.x === x && bean.y === y)) return false;
+    
+    // Check dinosaurs
+    if (gameState.dinosaurs.some(dino => dino.x === x && dino.y === y)) return false;
+    
+    // Check items
+    if (gameState.items.some(item => item.x === x && item.y === y)) return false;
+    
+    return true;
+}
+
+// Handle cell click
+function handleCellClick(x, y) {
+    if (!gameState.gameStarted || gameState.fighting) return;
+    
+    // Check if adjacent to player
+    const dx = Math.abs(x - gameState.player.x);
+    const dy = Math.abs(y - gameState.player.y);
+    
+    // Must be adjacent (non-diagonal) and not a wall
+    if (dx + dy === 1 && gameState.maze[y][x] === 0) {
+        movePlayer(x, y);
+    }
+}
+
+// Move player
+function movePlayer(x, y) {
+    // Update player position
+    gameState.player.x = x;
+    gameState.player.y = y;
+    
+    // Check for collisions
+    checkCollisions();
+    
+    // Move dinosaurs
+    moveDinosaurs();
+    
+    // Check for dinosaur collisions
+    checkDinosaurCollisions();
+    
+    // Update UI
+    updateUI();
+}
+
+// Check for collisions with items/beans
+function checkCollisions() {
+    // Check for bean collision
+    const beanIndex = gameState.beans.findIndex(bean => 
+        bean.x === gameState.player.x && bean.y === gameState.player.y
+    );
+    
+    if (beanIndex !== -1) {
+        gameState.inventory.beans++;
+        gameState.beans.splice(beanIndex, 1);
+    }
+    
+    // Check for item collision
+    const itemIndex = gameState.items.findIndex(item => 
+        item.x === gameState.player.x && item.y === gameState.player.y
+    );
+    
+    if (itemIndex !== -1) {
+        const item = gameState.items[itemIndex];
+        
+        if (!gameState.inventory.tools.includes(item.type)) {
+            gameState.inventory.tools.push(item.type);
+        }
+        
+        gameState.items.splice(itemIndex, 1);
+        
+        // Update tool visibility in fight area
+        updateToolAvailability();
+    }
+    
+    // Check if at cave
+    if (gameState.player.x === gameState.cave.x && gameState.player.y === gameState.cave.y) {
+        brewBtn.disabled = gameState.inventory.beans < 10;
+        // Show how many beans you have and how many you need
+        if (gameState.inventory.beans < 10) {
+            beansEl.innerHTML = `<span style="color: ${gameState.inventory.beans >= 5 ? 'gold' : 'salmon'}">${gameState.inventory.beans}/10</span>`;
+        } else {
+            beansEl.innerHTML = `<span style="color: lightgreen">${gameState.inventory.beans}/10</span>`;
+        }
+    } else {
+        brewBtn.disabled = true;
+        beansEl.textContent = gameState.inventory.beans + '/10';
+    }
+}
+
+// Update tool availability in the fight area
+function updateToolAvailability() {
+    document.getElementById('rock').classList.toggle('disabled', !gameState.inventory.tools.includes('rock'));
+    document.getElementById('paper').classList.toggle('disabled', !gameState.inventory.tools.includes('paper'));
+    document.getElementById('scissors').classList.toggle('disabled', !gameState.inventory.tools.includes('scissors'));
+}
+
+// Check for collisions with dinosaurs
+function checkDinosaurCollisions() {
+    for (let i = 0; i < gameState.dinosaurs.length; i++) {
+        const dino = gameState.dinosaurs[i];
+        
+        if (dino.x === gameState.player.x && dino.y === gameState.player.y) {
+            // Start fight
+            startFight(dino);
+            break;
+        }
+    }
+}
+
+// Move dinosaurs
+function moveDinosaurs() {
+    gameState.dinosaurs.forEach(dino => {
+        // Simple movement - move randomly with 50% chance
+        if (Math.random() < 0.5) {
+            //
